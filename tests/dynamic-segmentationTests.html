@@ -1,0 +1,59 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+    <head>
+	<title>dynamic-segmentation Tests</title>
+
+	<!-- META TAGS -->
+	<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+
+	<!-- CSS -->
+	<link rel="stylesheet" type="text/css" href="../../../dijit/themes/claro/claro.css" />
+	<link rel="stylesheet" type="text/css" href="../../../esri/css/esri.css" />
+	<link rel="stylesheet" href="../resources/dynamic-segmentation.css">
+	<style type='text/css'>
+	 body {
+	     padding: 50px;
+	 }
+	</style>
+    </head>
+    <body class='claro'>
+	<div id="map"></div>
+	<div id="node"></div>
+	<script type='text/javascript' src="../../../dojo/dojo.js"></script>
+	<script type="text/javascript">
+	 var baseUrl = window.location.pathname.replace(/\/[^\/]+$/, '') + '/' + '../../../';
+	 var widgetUnderTest, map;
+
+	 require({
+	     baseUrl: baseUrl,
+	     packages: ['app', 'esri', 'dojo', 'dijit', 'dojox']
+	 }, [
+	     'esri/map',
+	     'esri/layers/ArcGISDynamicMapServiceLayer',
+	     'app/widget/dynamic-segmentation',
+
+	     'dojo/domReady!'
+	 ], function(Map, ArcGISDynamicMapServiceLayer, Module) {
+	     map = new Map("map", {
+		 basemap: "topo",
+		 center: [-83.3129,42.5736],
+		 zoom: 14,
+		 sliderStyle: "small"
+	     });
+
+	     var routeService = 'http://sit.sistemigis.it/sit/rest/services/Demo/DSUtility/MapServer'
+
+	     var routeLayer = new ArcGISDynamicMapServiceLayer(routeService);
+
+	     map.addLayer(routeLayer);
+	     
+	     widgetUnderTest = new Module({
+		 map: map,
+		 routeLayer: routeLayer,
+		 layerId: 0,
+		 tolerance: 15
+	     }, 'node');
+	 });
+	</script>
+    </body>
+</html>

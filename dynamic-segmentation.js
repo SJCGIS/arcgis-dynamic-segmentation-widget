@@ -6,12 +6,13 @@ define([
     'dojo/_base/lang',
     'dojo/_base/Color',
 
+    'dojo/dom',
     'dojo/dom-construct',
     'dojo/json',
     'dojo/number',
     'dojo/on',
 
-    'dijit/form/Button',
+    'dojox/widget/Toaster',
 
     'esri/dijit/PopupTemplate',
     'esri/request',
@@ -22,8 +23,7 @@ define([
     'esri/geometry/Point',
 
     'dijit/_WidgetBase',
-    'dijit/_TemplatedMixin',
-    'dojox/widget/Toaster'
+    'dijit/_TemplatedMixin'
 ], function(
     template,
 
@@ -32,12 +32,13 @@ define([
     lang,
     Color,
 
+    dom,
     domConstruct,
     JSON,
     number,
     on,
 
-    Button,
+    Toaster,
 
     PopupTemplate,
     esriRequest,
@@ -48,8 +49,7 @@ define([
     Point,
 
     _WidgetBase,
-    _TemplatedMixin,
-    Toaster
+    _TemplatedMixin
 ) {
     return declare([_WidgetBase, _TemplatedMixin], {
         // description:
@@ -73,16 +73,10 @@ define([
 	    console.log('app.dynamic-segmentation::constructor', arguments);
 	    this.toolbar = new Draw(params.map);
 	    this.mapPoint = new Point();
-	    this.popup = new Popup({},domConstruct.create("div"));
-	    this.popupTemplate = new PopupTemplate();
 	},
 
 	postMixInProperties: function() {
 	    console.log('app.dynamic-segmentation::postMixinProperties', arguments);
-
-	    if (this.map) {
-		this.map.infoWindow = this.popup;
-	    }
 
 	    if (!this.symbol) {
 		console.log("No symbol specified");
@@ -98,6 +92,11 @@ define([
             // tags:
             //      private
             console.log('app.dynamic-segmentation::postCreate', arguments);
+
+	    this.toaster = new Toaster({
+		id: 'measureToaster',
+		positionDirection: 'tl-right'		
+	    }, this.toasterPane);
 
             this.setupConnections();
 
@@ -120,7 +119,6 @@ define([
 	_identifyRoute: function(evt) {
 	    console.log('app.dynamic-segmentation::_identifyRoute', arguments);
 	    this.map.graphics.clear();
-	    this.map.infoWindow.clearFeatures();
 	    this.routeIdentifyHandler.pause();
 	    this.mapPoint = evt.mapPoint;
 	    var params = {
@@ -141,26 +139,21 @@ define([
 	    console.log('app.dynamic-segmentation::_identifySuccess', arguments);
 	    var mPoint = this.mapPoint;
 	    var mSymbol = this.symbol;
-	    var mPopupTemplate = new PopupTemplate();
-	    mPopupTemplate.setTitle("Route Measurement");
+	    var toaster = this.toaster;
 	    if (results.location.length == 0) {
 		console.log("No results");
-		mPopupTemplate.setContent("No route measures found");
-		var attr = {};
-		var graphic = new Graphic(mPoint, mSymbol, attr, mPopupTemplate);
-		this.map.graphics.add(graphic);
+		toaster.setContent("No route measures found");
 	    } else {
-		mPopupTemplate.setContent("${*}");
-		array.forEach(results.location, function(mDetails) {
+		var ul = domConstruct.create("ul");
+		array.map(results.location, function(mDetails) {
 		    mDetails.measure = number.format(mDetails.measure, {places:3});
-		    var attr = {"Route ID" : mDetails.routeID, "Measurement": mDetails.measure};
-		    var graphic = new Graphic(mPoint, mSymbol, attr, mPopupTemplate);
-		    this.map.graphics.add(graphic);
+		    var li = domConstruct.create("li");
+		    li.innerHTML = 'Route: ' + mDetails.routeID + ' Measure: ' + mDetails.measure;
+		    ul.appendChild(li);
 		});
+		toaster.setContent(ul.innerHTML);
 	    }
-	    debugger;
-	    this.map.infoWindow.setFeatures(this.map.graphics.graphics);
-	    this.map.infoWindow.show(mPoint);
+	    toaster.show();
 	},
 	
 	_identifyError: function() {

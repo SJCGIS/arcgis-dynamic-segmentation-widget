@@ -21,6 +21,7 @@ define([
     'esri/symbols/SimpleMarkerSymbol',
     'esri/graphic',
     'esri/geometry/Point',
+    'esri/layers/GraphicsLayer',
 
     'dijit/_WidgetBase',
     'dijit/_TemplatedMixin'
@@ -47,6 +48,7 @@ define([
     SimpleMarkerSymbol,
     Graphic,
     Point,
+    GraphicsLayer,
 
     _WidgetBase,
     _TemplatedMixin
@@ -73,15 +75,21 @@ define([
 	    console.log('app.dynamic-segmentation::constructor', arguments);
 	    this.toolbar = new Draw(params.map);
 	    this.mapPoint = new Point();
+	    this.drawToolbar = new Draw(params.map);
 	},
 
 	postMixInProperties: function() {
 	    console.log('app.dynamic-segmentation::postMixinProperties', arguments);
 
+	    if (this.map && !this.graphicsLayer) {
+		this.graphicsLayer = new GraphicsLayer();
+		this.map.addLayer(this.graphicsLayer);
+	    }
+
 	    if (!this.symbol) {
 		console.log("No symbol specified");
 		this.symbol = new SimpleMarkerSymbol();
-		this.symbol.setStyle(SimpleMarkerSymbol.STYLE_CIRCLE);
+		this.symbol.setStyle(SimpleMarkerSymbol.STYLE_X);
 		this.symbol.setColor(new Color([255,0,0,0.5]));
 	    }
 	},
@@ -95,7 +103,8 @@ define([
 
 	    this.toaster = new Toaster({
 		id: 'measureToaster',
-		positionDirection: 'tl-right'		
+		positionDirection: 'tl-right',
+		duration: 0
 	    }, this.toasterPane);
 
             this.setupConnections();
@@ -109,18 +118,17 @@ define([
             console.log('app.dynamic-segmentation::setupConnections', arguments);
 
 	    on(this.identifyRouteBtn, 'click', lang.hitch(this,'_onIdentifyRouteClick'));
-	    this.routeIdentifyHandler = on.pausable(this.map, 'click', lang.hitch(this, '_identifyRoute'));
-	    this.routeIdentifyHandler.pause();
+	    on(this.drawToolbar, 'draw-end', lang.hitch(this, '_identifyRoute'));
         },
 	_onIdentifyRouteClick: function() {
 	    console.log('app.dynamic-segmentation::_onIdentifyRouteClick', arguments);
-	    this.routeIdentifyHandler.resume();
+	    this.drawToolbar.activate(Draw.POINT);
 	},
 	_identifyRoute: function(evt) {
 	    console.log('app.dynamic-segmentation::_identifyRoute', arguments);
-	    this.map.graphics.clear();
-	    this.routeIdentifyHandler.pause();
-	    this.mapPoint = evt.mapPoint;
+	    this.graphicsLayer.clear();
+	    this.drawToolbar.deactivate();
+	    this.mapPoint = evt.geometry;
 	    var params = {
 		f: 'json',
 		location: JSON.stringify(this.mapPoint.toJson()),
@@ -139,10 +147,11 @@ define([
 	    console.log('app.dynamic-segmentation::_identifySuccess', arguments);
 	    var mPoint = this.mapPoint;
 	    var mSymbol = this.symbol;
-	    var toaster = this.toaster;
+	    this.graphicsLayer.add(new Graphic(mPoint, mSymbol));
+	    var content;
 	    if (results.location.length == 0) {
 		console.log("No results");
-		toaster.setContent("No route measures found");
+		content = "No route measures found";
 	    } else {
 		var ul = domConstruct.create("ul");
 		array.map(results.location, function(mDetails) {
@@ -151,13 +160,15 @@ define([
 		    li.innerHTML = 'Route: ' + mDetails.routeID + ' Measure: ' + mDetails.measure;
 		    ul.appendChild(li);
 		});
-		toaster.setContent(ul.innerHTML);
+		content = ul.innerHTML;
 	    }
-	    toaster.show();
+	    this.toaster.setContent(content, "message");
+	    this.toaster.show();
 	},
 	
-	_identifyError: function() {
+	_identifyError: function(err) {
 	    console.log('app.dynamic-segmentation::_identifyError', arguments);
+	    this.toaster.setContent(err, "error");
 	}
     });
 });

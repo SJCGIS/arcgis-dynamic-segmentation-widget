@@ -6,23 +6,24 @@ define([
     'dojo/_base/lang',
     'dojo/_base/Color',
 
+    'dojo/dom-construct',
     'dojo/json',
     'dojo/number',
     'dojo/on',
 
     'dijit/form/Button',
 
-    'esri/InfoTemplate',
+    'esri/dijit/PopupTemplate',
     'esri/request',
-    'esri/SnappingManager',
     'esri/toolbars/draw',
-    'esri/layers/GraphicsLayer',
+    'esri/dijit/Popup',
     'esri/symbols/SimpleMarkerSymbol',
     'esri/graphic',
     'esri/geometry/Point',
 
     'dijit/_WidgetBase',
-    'dijit/_TemplatedMixin'
+    'dijit/_TemplatedMixin',
+    'dojox/widget/Toaster'
 ], function(
     template,
 
@@ -31,23 +32,24 @@ define([
     lang,
     Color,
 
+    domConstruct,
     JSON,
     number,
     on,
 
     Button,
 
-    InfoTemplate,
+    PopupTemplate,
     esriRequest,
-    SnappingManager,
     Draw,
-    GraphicsLayer,
+    Popup,
     SimpleMarkerSymbol,
     Graphic,
     Point,
 
     _WidgetBase,
-    _TemplatedMixin
+    _TemplatedMixin,
+    Toaster
 ) {
     return declare([_WidgetBase, _TemplatedMixin], {
         // description:
@@ -71,14 +73,15 @@ define([
 	    console.log('app.dynamic-segmentation::constructor', arguments);
 	    this.toolbar = new Draw(params.map);
 	    this.mapPoint = new Point();
-	    this.graphicsLayer = new GraphicsLayer();
+	    this.popup = new Popup({},domConstruct.create("div"));
+	    this.popupTemplate = new PopupTemplate();
 	},
 
 	postMixInProperties: function() {
 	    console.log('app.dynamic-segmentation::postMixinProperties', arguments);
 
 	    if (this.map) {
-		this.map.addLayer(this.graphicsLayer);
+		this.map.infoWindow = this.popup;
 	    }
 
 	    if (!this.symbol) {
@@ -86,7 +89,6 @@ define([
 		this.symbol = new SimpleMarkerSymbol();
 		this.symbol.setStyle(SimpleMarkerSymbol.STYLE_CIRCLE);
 		this.symbol.setColor(new Color([255,0,0,0.5]));
-		console.log(this.symbol);
 	    }
 	},
 
@@ -108,20 +110,22 @@ define([
             console.log('app.dynamic-segmentation::setupConnections', arguments);
 
 	    on(this.identifyRouteBtn, 'click', lang.hitch(this,'_onIdentifyRouteClick'));
-	    on(this.toolbar, 'draw-end', lang.hitch(this,'_identifyRoute'));
+	    this.routeIdentifyHandler = on.pausable(this.map, 'click', lang.hitch(this, '_identifyRoute'));
+	    this.routeIdentifyHandler.pause();
         },
 	_onIdentifyRouteClick: function() {
 	    console.log('app.dynamic-segmentation::_onIdentifyRouteClick', arguments);
-	    this.toolbar.activate(Draw.POINT);
+	    this.routeIdentifyHandler.resume();
 	},
 	_identifyRoute: function(evt) {
 	    console.log('app.dynamic-segmentation::_identifyRoute', arguments);
-	    this.graphicsLayer.clear();
-	    this.toolbar.deactivate();
-	    this.mapPoint = evt.geometry;
+	    this.map.graphics.clear();
+	    this.map.infoWindow.clearFeatures();
+	    this.routeIdentifyHandler.pause();
+	    this.mapPoint = evt.mapPoint;
 	    var params = {
 		f: 'json',
-		location: JSON.stringify(evt.geometry.toJson()),
+		location: JSON.stringify(this.mapPoint.toJson()),
 		tolerance: this.tolerance
 	    };
 	    var url = this.routeLayer.url + '/exts/DSUtility/routeLayers/' + this.layerId + '/IdentifyRoute';
@@ -136,21 +140,27 @@ define([
 	_identifySuccess: function(results) {
 	    console.log('app.dynamic-segmentation::_identifySuccess', arguments);
 	    var mPoint = this.mapPoint;
-	    var gLayer = this.graphicsLayer;
 	    var mSymbol = this.symbol;
+	    var mPopupTemplate = new PopupTemplate();
+	    mPopupTemplate.setTitle("Route Measurement");
 	    if (results.location.length == 0) {
-		var infoTemplate = new InfoTemplate("Route Measurement", "No route measures found");
+		console.log("No results");
+		mPopupTemplate.setContent("No route measures found");
+		var attr = {};
+		var graphic = new Graphic(mPoint, mSymbol, attr, mPopupTemplate);
+		this.map.graphics.add(graphic);
 	    } else {
-		var infoTemplate = new InfoTemplate("Route Measurement", "${*}");
+		mPopupTemplate.setContent("${*}");
 		array.forEach(results.location, function(mDetails) {
 		    mDetails.measure = number.format(mDetails.measure, {places:3});
 		    var attr = {"Route ID" : mDetails.routeID, "Measurement": mDetails.measure};
-		    var graphic = new Graphic(mPoint, mSymbol, attr);
-		    gLayer.add(graphic);
+		    var graphic = new Graphic(mPoint, mSymbol, attr, mPopupTemplate);
+		    this.map.graphics.add(graphic);
 		});
 	    }
-	    gLayer.setInfoTemplate(infoTemplate);
-	    this.map.infoWindow.show(this.mapPoint);
+	    debugger;
+	    this.map.infoWindow.setFeatures(this.map.graphics.graphics);
+	    this.map.infoWindow.show(mPoint);
 	},
 	
 	_identifyError: function() {

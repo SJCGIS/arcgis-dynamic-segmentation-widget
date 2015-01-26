@@ -12,12 +12,9 @@ define([
     'dojo/number',
     'dojo/on',
 
-    'dojox/widget/Toaster',
-
-    'esri/dijit/PopupTemplate',
+    'esri/dijit/InfoWindow',
     'esri/request',
     'esri/toolbars/draw',
-    'esri/dijit/Popup',
     'esri/symbols/SimpleMarkerSymbol',
     'esri/graphic',
     'esri/geometry/Point',
@@ -39,12 +36,9 @@ define([
     number,
     on,
 
-    Toaster,
-
-    PopupTemplate,
+    InfoWindow,
     esriRequest,
     Draw,
-    Popup,
     SimpleMarkerSymbol,
     Graphic,
     Point,
@@ -75,7 +69,13 @@ define([
 	    console.log('app.dynamic-segmentation::constructor', arguments);
 	    this.toolbar = new Draw(params.map);
 	    this.mapPoint = new Point();
-	    this.drawToolbar = new Draw(params.map);
+	    this.drawToolbar = new Draw(params.map, {
+		showTooltips: false
+	    });
+	    this.info = new InfoWindow({
+		title: "Route Measures"
+	    }, domConstruct.create("div"));
+	    this.info.startup();
 	},
 
 	postMixInProperties: function() {
@@ -84,12 +84,13 @@ define([
 	    if (this.map && !this.graphicsLayer) {
 		this.graphicsLayer = new GraphicsLayer();
 		this.map.addLayer(this.graphicsLayer);
+		this.map.infoWindow = this.info;
 	    }
 
 	    if (!this.symbol) {
 		console.log("No symbol specified");
 		this.symbol = new SimpleMarkerSymbol();
-		this.symbol.setStyle(SimpleMarkerSymbol.STYLE_X);
+		this.symbol.setStyle(SimpleMarkerSymbol.STYLE_CIRCLE);
 		this.symbol.setColor(new Color([255,0,0,0.5]));
 	    }
 	},
@@ -100,12 +101,6 @@ define([
             // tags:
             //      private
             console.log('app.dynamic-segmentation::postCreate', arguments);
-
-	    this.toaster = new Toaster({
-		id: 'measureToaster',
-		positionDirection: 'tl-right',
-		duration: 0
-	    }, this.toasterPane);
 
             this.setupConnections();
 
@@ -128,6 +123,7 @@ define([
 	    console.log('app.dynamic-segmentation::_identifyRoute', arguments);
 	    this.graphicsLayer.clear();
 	    this.drawToolbar.deactivate();
+	    this.map.infoWindow.hide();
 	    this.mapPoint = evt.geometry;
 	    var params = {
 		f: 'json',
@@ -162,13 +158,13 @@ define([
 		});
 		content = ul.innerHTML;
 	    }
-	    this.toaster.setContent(content, "message");
-	    this.toaster.show();
+	    this.map.infoWindow.setContent(content);
+	    this.map.infoWindow.show(mPoint);
 	},
 	
 	_identifyError: function(err) {
 	    console.log('app.dynamic-segmentation::_identifyError', arguments);
-	    this.toaster.setContent(err, "error");
+	    this.map.infoWindow.setContent(err.message);
 	}
     });
 });

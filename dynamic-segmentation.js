@@ -57,7 +57,7 @@ define([
         // Properties to be sent into constructor
 	map: null,
 
-	routeLayer: null,
+	routeService: null,
 
 	layerId: null,
 
@@ -130,7 +130,7 @@ define([
 		location: JSON.stringify(this.mapPoint.toJson()),
 		tolerance: this.tolerance
 	    };
-	    var url = this.routeLayer.url + '/exts/DSUtility/routeLayers/' + this.layerId + '/IdentifyRoute';
+	    var url = this.routeService.url + '/exts/DSUtility/routeLayers/' + this.layerId + '/IdentifyRoute';
 	    var identifyRequest = esriRequest({
 		url: url,
 		content: params,

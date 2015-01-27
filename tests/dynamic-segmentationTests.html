@@ -41,15 +41,15 @@
 		 sliderStyle: "small"
 	     });
 
-	     var routeService = 'http://sit.sistemigis.it/sit/rest/services/Demo/DSUtility/MapServer'
+	     var routeServiceUrl = 'http://sit.sistemigis.it/sit/rest/services/Demo/DSUtility/MapServer'
 
-	     var routeLayer = new ArcGISDynamicMapServiceLayer(routeService);
+	     var routeService = new ArcGISDynamicMapServiceLayer(routeServiceUrl);
 
-	     map.addLayer(routeLayer);
+	     map.addLayer(routeService);
 	     
 	     widgetUnderTest = new Module({
 		 map: map,
-		 routeLayer: routeLayer,
+		 routeService: routeService,
 		 layerId: 0,
 		 tolerance: 15
 	     }, 'node');

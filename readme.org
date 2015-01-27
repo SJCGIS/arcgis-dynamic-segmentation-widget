@@ -6,13 +6,13 @@ This widget provides a button that can work with the [[http://blogs.esri.com/esr
 
 ** Usage
 
-*** Install the Dynamic Segmentation server object extension on your ArcGIS Server instance
+   - Install the Dynamic Segmentation server object extension on your ArcGIS Server instance
 
-*** Publish a service containing M values to your ArcGIS Server and select the Dynamic Segmentation SOE option
+   - Publish a service containing M values to your ArcGIS Server and select the Dynamic Segmentation SOE option
 
-*** Git clone or download and extract the zip file into your app's widget directory.
+   - Git clone or download and extract the zip file into your app's widget directory.
 
-*** Add widget to your app like this
+   - Add widget to your app like this
 
 #+begin_src javascript
   var dynamicSegmentationButton = new DynamicSegmentation({

@@ -1,5 +1,5 @@
 define([
-    'dojo/text!app/widget/templates/dynamic-segmentation.html',
+    'dojo/text!app/templates/dynamic-segmentation.html',
 
     'dojo/_base/array',
     'dojo/_base/declare',
